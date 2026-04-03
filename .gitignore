@@ -1,0 +1,8 @@
+.playwright-cli/
+tmp/
+output/pdf/
+output/playwright/
+output/web/
+output/web-minimal/
+*.pyc
+__pycache__/

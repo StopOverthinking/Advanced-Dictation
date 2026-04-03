@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>단어장</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'%3E%3Crect width='96' height='96' rx='24' fill='%231f5f5b'/%3E%3Cpath d='M27 24h28c7.18 0 13 5.82 13 13v35H40c-7.18 0-13-5.82-13-13V24Z' fill='%23fffaf3'/%3E%3Cpath d='M40 38h18M40 50h18M40 62h12' stroke='%231f5f5b' stroke-width='5' stroke-linecap='round'/%3E%3C/svg%3E">
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700;800&family=Noto+Serif+KR:wght@500;700&display=swap");
+
+    :root {
+      --bg: #f4f1ea;
+      --panel: rgba(255, 255, 255, 0.86);
+      --panel-strong: #fffdfa;
+      --text: #1f2933;
+      --muted: #5a6572;
+      --line: rgba(31, 41, 51, 0.1);
+      --accent: #1f5f5b;
+      --accent-soft: #dcece7;
+      --shadow: 0 18px 40px rgba(31, 41, 51, 0.08);
+      --radius-lg: 24px;
+      --radius-md: 18px;
+      --radius-sm: 999px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(31, 95, 91, 0.14), transparent 34%),
+        radial-gradient(circle at top right, rgba(196, 144, 94, 0.12), transparent 28%),
+        linear-gradient(180deg, #f8f6f1 0%, var(--bg) 100%);
+      min-height: 100vh;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255, 255, 255, 0.32) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.32) 1px, transparent 1px);
+      background-size: 36px 36px;
+      mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.55), transparent 86%);
+      pointer-events: none;
+    }
+
+    .shell {
+      width: min(1180px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 28px 0 56px;
+      position: relative;
+    }
+
+    .hero {
+      padding: 28px;
+      border: 1px solid rgba(255, 255, 255, 0.68);
+      border-radius: var(--radius-lg);
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.88), rgba(255, 253, 249, 0.8));
+      backdrop-filter: blur(18px);
+      box-shadow: var(--shadow);
+      display: grid;
+      gap: 18px;
+    }
+
+    .hero-top {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: end;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2rem, 4vw, 3.4rem);
+      line-height: 0.95;
+      letter-spacing: -0.04em;
+    }
+
+    .meta {
+      display: inline-flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .meta span {
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      background: rgba(31, 95, 91, 0.08);
+      color: var(--accent);
+      font-size: 0.95rem;
+      font-weight: 700;
+    }
+
+    .search-wrap {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .search {
+      width: 100%;
+      border: 0;
+      outline: 0;
+      padding: 16px 18px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.9);
+      color: var(--text);
+      font-size: 1rem;
+      box-shadow: inset 0 0 0 1px rgba(31, 41, 51, 0.08);
+    }
+
+    .search::placeholder {
+      color: #7a8694;
+    }
+
+    .count {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .filters {
+      position: sticky;
+      top: 18px;
+      z-index: 10;
+      margin-top: 18px;
+      padding: 16px;
+      border-radius: 20px;
+      background: rgba(255, 253, 249, 0.82);
+      backdrop-filter: blur(18px);
+      border: 1px solid rgba(255, 255, 255, 0.7);
+      box-shadow: 0 12px 24px rgba(31, 41, 51, 0.06);
+      transform: translateY(0);
+      opacity: 1;
+      transition:
+        transform 280ms cubic-bezier(0.22, 1, 0.36, 1),
+        opacity 220ms ease,
+        box-shadow 220ms ease;
+      will-change: transform, opacity;
+    }
+
+    .filters.is-hidden {
+      transform: translateY(calc(-100% - 18px));
+      opacity: 0;
+      box-shadow: 0 6px 12px rgba(31, 41, 51, 0.03);
+      pointer-events: none;
+    }
+
+    .filter-row {
+      display: flex;
+      gap: 10px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      padding-bottom: 2px;
+    }
+
+    .filter-row::-webkit-scrollbar {
+      display: none;
+    }
+
+    .chip {
+      border: 0;
+      padding: 11px 16px;
+      border-radius: var(--radius-sm);
+      background: rgba(31, 41, 51, 0.05);
+      color: var(--muted);
+      font: inherit;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 160ms ease, background 160ms ease, color 160ms ease;
+      white-space: nowrap;
+    }
+
+    .chip:hover {
+      transform: translateY(-1px);
+    }
+
+    .chip.active {
+      background: var(--accent);
+      color: #f7fbfa;
+    }
+
+    .grid {
+      margin-top: 18px;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .card {
+      position: relative;
+      overflow: hidden;
+      padding: 18px 18px 16px;
+      border-radius: var(--radius-md);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 253, 250, 0.84));
+      border: 1px solid rgba(255, 255, 255, 0.85);
+      box-shadow: var(--shadow);
+      display: grid;
+      gap: 10px;
+      min-height: 204px;
+    }
+
+    .card::after {
+      content: "";
+      position: absolute;
+      inset: 0 auto auto 0;
+      width: 100%;
+      height: 4px;
+      background: linear-gradient(90deg, #1f5f5b 0%, #d2a46d 100%);
+      opacity: 0.95;
+    }
+
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: start;
+    }
+
+    .set-tag {
+      flex: 0 0 auto;
+      padding: 7px 10px;
+      border-radius: 12px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-size: 0.8rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+    }
+
+    .word {
+      margin: 0;
+      font-family: "Noto Serif KR", "Noto Serif Korean", serif;
+      font-size: clamp(1.4rem, 2.2vw, 1.8rem);
+      font-weight: 700;
+      line-height: 1.15;
+      letter-spacing: -0.03em;
+      word-break: keep-all;
+    }
+
+    .definition {
+      margin: 0;
+      font-family: "Nanum Gothic", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+      font-size: 1.1rem;
+      line-height: 1.72;
+      color: var(--text);
+      word-break: keep-all;
+    }
+
+    .example-block {
+      margin-top: auto;
+      padding-top: 10px;
+      border-top: 1px solid var(--line);
+    }
+
+    .example {
+      margin: 0;
+      font-family: "Nanum Gothic", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+      font-size: 1.04rem;
+      line-height: 1.7;
+      color: var(--muted);
+      word-break: keep-all;
+    }
+
+    .empty {
+      grid-column: 1 / -1;
+      padding: 48px 20px;
+      border-radius: var(--radius-md);
+      text-align: center;
+      background: rgba(255, 255, 255, 0.78);
+      border: 1px solid rgba(255, 255, 255, 0.88);
+      color: var(--muted);
+      font-weight: 700;
+      box-shadow: var(--shadow);
+    }
+
+    @media (max-width: 900px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .shell {
+        width: min(100vw - 20px, 100%);
+        padding-top: 10px;
+      }
+
+      .hero {
+        padding: 22px 18px;
+      }
+
+      .search-wrap {
+        grid-template-columns: 1fr;
+      }
+
+      .filters {
+        top: 10px;
+        padding: 12px;
+      }
+
+      .card {
+        padding: 16px 16px 14px;
+        min-height: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <section class="hero">
+      <div class="hero-top">
+        <h1>단어장</h1>
+        <div class="meta">
+          <span>세트 11</span>
+          <span>단어 110</span>
+        </div>
+      </div>
+      <div class="search-wrap">
+        <input id="searchInput" class="search" type="search" placeholder="단어, 뜻, 예문 검색" autocomplete="off">
+        <div id="countLabel" class="count"></div>
+      </div>
+    </section>
+
+    <section id="filtersBar" class="filters">
+      <div id="filterRow" class="filter-row"></div>
+    </section>
+
+    <main id="cardGrid" class="grid"></main>
+  </div>
+
+  <script>
+    const DATA = {"set1": [{"word": "간과하다", "definition": "중요한 것을 대수롭지 않게 여기고 그냥 스쳐 지나가듯 넘겨버리다.", "example": "손 씻기의 중요성을 간과하면 감기에 걸리기 쉽다.", "dictation": "사소한 실수라고 해서 그 원인을 간과해서는 안 된다."}, {"word": "고질적", "definition": "너무 오래되어서 고치기 아주 힘들어진 나쁜 버릇이나 문제점.", "example": "숙제를 항상 내일로 미루는 것은 나의 고질적인 습관이다.", "dictation": "우리 사회의 고질적인 안전 불감증이 큰 참사를 불렀다."}, {"word": "막역하다", "definition": "서로 숨기거나 부끄러운 것 하나 없이 아주 친하다.", "example": "지훈이와 나는 어릴 때부터 매일 붙어 다닌 막역한 사이다.", "dictation": "두 사람은 어릴 적부터 기쁨과 슬픔을 나눈 막역한 사이이다."}, {"word": "반추하다", "definition": "과거의 일이나 경험을 자꾸 되돌아보며 깊이 생각하다.", "example": "일기장을 천천히 읽어보며 지난 일들을 반추해 보았다.", "dictation": "실패의 경험을 반추하며 나아갈 방향을 새롭게 정했다."}, {"word": "상쇄하다", "definition": "서로 반대되는 것이 만나서 원래 있던 효과가 사라지게 하다.", "example": "시험을 잘 본 기쁨이 용돈을 잃어버린 슬픔을 완전히 상쇄했다.", "dictation": "예상 밖의 추가 수익이 그동안의 적자를 완전히 상쇄했다."}, {"word": "역설적", "definition": "겉보기에는 앞뒤가 안 맞지만 그 안에 중요한 진리가 숨어 있는 상태.", "example": "'실패가 곧 성공의 어머니'라는 말은 참 역설적이다.", "dictation": "바쁘게 움직일수록 여유를 잃는다는 것은 참으로 역설적이다."}, {"word": "지양하다", "definition": "더 나은 방향으로 가기 위해 좋지 않은 행동을 하지 않도록 피하다.", "example": "친구의 단점만 찾아내어 놀리는 행동은 지양해야 한다.", "dictation": "맹목적인 암기를 지양하고, 탐구하는 사고력을 길러야 한다."}, {"word": "착잡하다", "definition": "여러 생각이 복잡하게 얽혀서 마음이 아주 어수선하고 심란하다.", "example": "가장 친한 친구가 멀리 전학을 간다고 해서 마음이 매우 착잡하다.", "dictation": "준비했던 대회에서 입상하지 못해 그의 마음은 몹시 착잡했다."}, {"word": "천편일률적", "definition": "각자의 개성 없이 모두 다 똑같고 뻔하다.", "example": "요즘 유행가들은 멜로디가 다 비슷해서 천편일률적으로 느껴진다.", "dictation": "학생의 개성을 무시한 천편일률적인 제도는 개선되어야 한다."}, {"word": "혜안", "definition": "겉모습에 속지 않고 그 속에 숨겨진 진짜 의미를 꿰뚫어 보는 지혜.", "example": "인터넷의 수많은 정보 속에서 사실을 찾아내는 혜안을 길러야 한다.", "dictation": "복잡한 사회를 살아가기 위해서는 본질을 보는 혜안이 필요하다."}], "set2": [{"word": "방관하다", "definition": "직접 나서서 돕거나 참견하지 않고 옆에서 지켜보기만 하다.", "example": "괴롭힘을 당하는 친구를 방관하는 것도 잘못된 행동이다.", "dictation": "불의를 보고도 방관하는 태도를 버려야 한다."}, {"word": "괴리감", "definition": "현실과 이상이 서로 맞지 않아 동떨어지게 느껴지는 마음.", "example": "계획과 현실의 차이가 너무 커서 괴리감이 들었다.", "dictation": "이상과 현실의 차이에서 오는 괴리감을 극복해야 한다."}, {"word": "귀감", "definition": "거울로 삼아 배울 만한 훌륭한 본보기.", "example": "이순신 장군은 모든 군인들의 귀감이 되는 분이다.", "dictation": "그의 헌신적인 봉사는 많은 사람에게 귀감이 되었다."}, {"word": "부각되다", "definition": "어떤 특징이나 문제가 사람들의 관심을 끌며 눈에 띄게 드러나다.", "example": "환경 오염의 심각성이 최근 들어 더욱 부각되고 있다.", "dictation": "발표에서는 우리 모둠의 창의적인 아이디어가 부각되었다."}, {"word": "역량", "definition": "어떤 일을 스스로 해낼 수 있는 뛰어난 능력이나 힘.", "example": "꾸준히 연습하여 수학 문제를 푸는 역량을 키워야 한다.", "dictation": "각자의 역량을 최대한 발휘하여 프로젝트를 완성했다."}, {"word": "직면하다", "definition": "피할 수 없는 어려운 일이나 상황에 직접 마주치다.", "example": "우리는 지구 온난화라는 큰 문제에 직면해 있다.", "dictation": "예상치 못한 위기에 직면했지만 당황하지 않았다."}, {"word": "폄하하다", "definition": "다른 사람의 노력이나 가치를 일부러 깎아내려 나쁘게 말하다.", "example": "상대방의 의견을 함부로 폄하하는 것은 예의가 아니다.", "dictation": "다른 사람의 노력을 근거 없이 폄하해서는 안 된다."}, {"word": "획기적", "definition": "세상이 깜짝 놀랄 만큼 완전히 새롭고 눈에 띄게 발전한 상태.", "example": "스마트폰의 발명은 우리 삶에 획기적인 변화를 가져왔다.", "dictation": "이번 연구를 통해 획기적인 문제 해결 방안을 제시했다."}, {"word": "모순", "definition": "말이나 행동의 앞뒤가 서로 맞지 않아 이치에 어긋나는 것.", "example": "환경을 보호하자면서 쓰레기를 몰래 버리는 것은 모순이다.", "dictation": "그의 주장은 앞뒤가 맞지 않는 모순 투성이였다."}, {"word": "도태되다", "definition": "변화하는 환경에 제대로 적응하지 못해 뒤처지거나 밀려나다.", "example": "기술 발전에 맞추어 공부하지 않으면 결국 도태되고 만다.", "dictation": "급변하는 시대의 흐름에 적응하지 못하면 도태되기 마련이다."}], "set3": [{"word": "개연성", "definition": "어떤 일이 실제로 일어날 법한 가능성이나 타당성.", "example": "이 소설의 결말은 이야기의 흐름상 개연성이 충분하다.", "dictation": "이야기의 전개가 갑자기 바뀌면 개연성이 떨어진다."}, {"word": "고취하다", "definition": "용기나 의욕, 정신 등을 북돋워 높여 주다.", "example": "선생님은 학생들에게 할 수 있다는 자신감을 고취하셨다.", "dictation": "경기를 앞두고 팀원들의 사기를 고취할 필요가 있다."}, {"word": "당위성", "definition": "마땅히 그렇게 해야 하거나 되어야 하는 성질.", "example": "우리는 환경을 보호해야 한다는 당위성을 잊지 말아야 한다.", "dictation": "규칙을 지키는 것은 사회 일원으로서의 당위성이다."}, {"word": "매도하다", "definition": "다른 사람을 몹시 비난하며 나쁜 쪽으로 몰아세우다.", "example": "단 한 번의 실수로 그를 실패자로 매도해서는 안 된다.", "dictation": "사실 확인도 없이 친구를 나쁜 사람으로 매도했다."}, {"word": "부합하다", "definition": "생각이나 사실, 상황 등이 서로 꼭 들어맞다.", "example": "이번 결과는 우리가 처음에 세웠던 목표와 부합한다.", "dictation": "그의 행동은 평소 말하던 가치관과 부합하지 않는다."}, {"word": "선구자", "definition": "남보다 앞서서 새로운 길이나 사상을 열어 나가는 사람.", "example": "그는 우리나라 현대 문학을 이끈 선구자로 평가받는다.", "dictation": "선구자들의 희생 덕분에 우리는 지금의 자유를 누린다."}, {"word": "야기하다", "definition": "어떤 사건이나 좋지 않은 문제를 일으키다.", "example": "지나친 욕심은 예상치 못한 갈등을 야기할 수 있다.", "dictation": "무분별한 개발은 심각한 환경 파괴를 야기한다."}, {"word": "유기적", "definition": "여러 부분이 서로 긴밀하게 연결되어 하나를 이루는 상태.", "example": "글 전체가 통일감을 가지려면 문장들이 유기적으로 연결되어야 한다.", "dictation": "우리 몸의 장기들은 유기적으로 연결되어 작동한다."}, {"word": "이면", "definition": "겉으로 드러나지 않은 뒤편이나 속사정.", "example": "화려한 겉모습보다는 그 이면에 담긴 진실을 보아야 한다.", "dictation": "성공의 이면에는 끊임없는 노력이 숨어 있기 마련이다."}, {"word": "함양하다", "definition": "지식, 품성, 정서 등을 오랫동안 길러서 쌓다.", "example": "학교는 학생들의 바른 인성을 함양하는 데 힘쓰고 있다.", "dictation": "독서는 풍부한 정서를 함양하는 데 아주 좋은 방법이다."}], "set4": [{"word": "기만하다", "definition": "남을 교묘하게 속여 넘기다.", "example": "소비자를 기만하는 거짓 광고에 속지 말아야 한다.", "dictation": "소비자를 기만하는 거짓 광고는 처벌받아야 마땅하다."}, {"word": "남발하다", "definition": "어떤 말이나 행동을 생각 없이 함부로 자꾸 하다.", "example": "지키지도 못할 약속을 남발하면 신용을 잃게 된다.", "dictation": "지키지 못할 약속을 남발하면 결국 신뢰를 잃는다."}, {"word": "대두되다", "definition": "어떤 문제나 세력이 새롭게 머리를 들고 나타나다.", "example": "저출산 문제가 우리 사회의 가장 큰 문제로 대두되었다.", "dictation": "환경 보호가 매우 중요한 사회적 문제로 대두되었다."}, {"word": "모색하다", "definition": "일의 해결 방법이나 방향을 이리저리 깊이 생각하며 찾다.", "example": "위기를 벗어나기 위해 새로운 해결책을 모색해야 한다.", "dictation": "갈등을 해결하기 위한 평화적인 방안을 모색했다."}, {"word": "배제하다", "definition": "어떤 것을 물리쳐서 빼거나 제외하다.", "example": "감정을 배제하고 객관적인 사실만을 바탕으로 판단하자.", "dictation": "개인적인 감정을 배제하고 공정하게 심사해야 한다."}, {"word": "상충하다", "definition": "두 가지 이상의 의견이나 이해관계가 서로 맞지 않고 어긋나다.", "example": "개발과 보존이라는 두 가지 입장이 서로 상충하고 있다.", "dictation": "서로의 이익이 상충하여 원만한 합의점을 찾기 어렵다."}, {"word": "암시하다", "definition": "직접 말하지 않고 넌지시 깨우쳐 주거나 힌트를 주다.", "example": "소설의 첫 문장은 앞으로 일어날 비극을 암시하고 있다.", "dictation": "그의 어두운 표정은 앞으로 닥칠 불길한 사건을 암시했다."}, {"word": "점철되다", "definition": "관련 있는 일들이 끊이지 않고 죽 이어지다.", "example": "우리 역사는 수많은 외세의 침략과 시련으로 점철되어 있다.", "dictation": "그의 삶은 끊임없는 실패와 깊은 좌절로 점철되었다."}, {"word": "타개하다", "definition": "매우 어렵고 막힌 상황을 뚫고 나가서 해결하다.", "example": "경제 불황을 타개하기 위해 새로운 정책을 발표했다.", "dictation": "어려운 위기 상황을 타개할 지혜로운 묘책이 필요하다."}, {"word": "표방하다", "definition": "어떤 주장이나 뜻을 대표로 내세우다.", "example": "이 식당은 건강한 자연식 밥상을 표방하여 인기를 끌고 있다.", "dictation": "우리 학교는 학생 중심의 자유로운 교육을 표방한다."}], "set5": [{"word": "결여되다", "definition": "마땅히 있어야 할 것이 빠져서 없거나 모자라다.", "example": "그의 발표는 구체적인 근거가 결여되어 설득력이 부족했다.", "dictation": "책임감이 결여된 무책임한 태도를 깊이 반성해야 한다."}, {"word": "고착되다", "definition": "어떤 상황이나 현상이 굳어져서 변하지 않게 되다.", "example": "한번 고착된 나쁜 습관은 고치기가 매우 어렵다.", "dictation": "잘못된 관행이 오랫동안 고착되어 문제를 키웠다."}, {"word": "괄목하다", "definition": "눈을 비비고 볼 정도로 놀랍게 발전하다.", "example": "우리 팀은 지난 대회보다 괄목할 만한 성장을 이루었다.", "dictation": "그의 실력이 괄목할 만큼 눈부시게 발전하여 놀랐다."}, {"word": "규명하다", "definition": "어떤 사실이나 원인을 자세히 따져서 밝혀내다.", "example": "경찰은 이번 사건의 진상을 철저히 규명하겠다고 발표했다.", "dictation": "문제가 발생한 근본적인 원인을 정확히 규명해야 한다."}, {"word": "내포하다", "definition": "어떤 뜻이나 성질을 겉으로 드러내지 않고 속에 품다.", "example": "그의 짧은 한마디에는 많은 의미가 내포되어 있었다.", "dictation": "이 시는 겉보기와 달리 아주 깊은 슬픔을 내포하고 있다."}, {"word": "담보하다", "definition": "어떤 일의 책임을 지거나 앞날을 보증하다.", "example": "안전이 담보되지 않은 무리한 계획은 실행할 수 없다.", "dictation": "성공을 완벽하게 담보할 수 있는 일은 세상에 없다."}, {"word": "도모하다", "definition": "어떤 일을 이루기 위해 대책이나 방법을 세우다.", "example": "우리는 서로 협력하여 공동의 이익을 도모해야 한다.", "dictation": "새로운 변화와 혁신을 도모해야 할 중요한 시기이다."}, {"word": "무색하다", "definition": "본래의 가치나 빛을 잃어 부끄럽게 되다.", "example": "철저한 증거 앞에서는 그의 어떤 변명도 무색해졌다.", "dictation": "그간의 노력이 무색할 정도로 참담한 결과를 얻었다."}, {"word": "미봉책", "definition": "근본적인 해결 없이 임시방편으로 꾸며대는 계책.", "example": "그것은 당장의 위기를 모면하기 위한 단순한 미봉책일 뿐이다.", "dictation": "눈앞의 문제만 덮으려는 미봉책으로는 상황을 바꿀 수 없다."}, {"word": "반향", "definition": "어떤 사건이나 발표가 사람들에게 불러일으키는 반응.", "example": "새롭게 출시된 상품이 소비자들 사이에서 큰 반향을 일으켰다.", "dictation": "그의 감동적인 연설은 사회적으로 엄청난 반향을 불렀다."}], "set6": [{"word": "발췌하다", "definition": "책이나 글에서 필요하거나 중요한 부분만 골라내다.", "example": "숙제를 하기 위해 백과사전에서 핵심 내용만 발췌했다.", "dictation": "여러 자료에서 필요한 정보만 정확하게 발췌하여 정리했다."}, {"word": "병행하다", "definition": "두 가지 이상의 일을 한꺼번에 함께 진행하다.", "example": "학업과 운동을 병행하는 것은 생각보다 쉽지 않은 일이다.", "dictation": "이론 공부와 실습을 병행해야 제대로 배울 수 있다."}, {"word": "복선", "definition": "앞으로 일어날 일을 미리 짐작할 수 있게 넌지시 보여주는 장치.", "example": "영화 초반에 등장한 시계는 결말을 위한 중요한 복선이었다.", "dictation": "작가는 소설 곳곳에 이야기의 반전을 위한 복선을 깔아두었다."}, {"word": "부추기다", "definition": "다른 사람이 어떤 일을 하도록 곁에서 꼬드기거나 충동질하다.", "example": "친구의 싸움을 말리지는 못할망정 옆에서 부추겨서는 안 된다.", "dictation": "서로의 경쟁심을 부추기는 교육 방식은 바람직하지 않다."}, {"word": "비약적", "definition": "지위나 수준 등이 갑자기 훌쩍 뛰어오르는 상태.", "example": "과학 기술의 비약적인 발전으로 우리의 생활이 편리해졌다.", "dictation": "꾸준한 훈련 덕분에 그의 기록이 비약적으로 단축되었다."}, {"word": "시사하다", "definition": "어떤 것을 미리 짐작할 수 있도록 넌지시 알려 주다.", "example": "이번 사건은 우리 사회의 안전망이 부족하다는 점을 시사한다.", "dictation": "이 통계 자료는 환경 문제의 심각성을 뚜렷하게 시사한다."}, {"word": "심연", "definition": "헤아릴 수 없이 깊은 물이나 빠져나오기 힘든 깊은 구렁.", "example": "실패를 겪은 후 그는 깊은 절망의 심연에 빠지고 말았다.", "dictation": "우울한 감정의 심연에서 벗어나기 위해 밖으로 나갔다."}, {"word": "아우르다", "definition": "여러 가지를 한데 모아 덩어리가 되게 하거나 하나의 체계로 묶다.", "example": "그는 다양한 의견을 하나로 아우르는 뛰어난 리더십을 보였다.", "dictation": "과거와 현재를 모두 아우르는 넓은 시각이 필요하다."}, {"word": "안일하다", "definition": "편안함만 추구하거나 문제를 심각하게 생각하지 않고 만만하게 보다.", "example": "설마 하는 안일한 생각이 결국 큰 사고를 부르고 말았다.", "dictation": "위기 상황에서 안일하게 대처하면 더 큰 피해를 입는다."}, {"word": "알력", "definition": "서로 의견이 맞지 않아 사이가 벌어지고 충돌하는 것.", "example": "새로운 제도를 도입하는 과정에서 부서 간의 알력이 발생했다.", "dictation": "이익을 둘러싼 집단 간의 알력 다툼이 끊이지 않고 있다."}], "set7": [{"word": "어불성설", "definition": "말이 이치에 조금도 맞지 않아 말이 되지 않음.", "example": "노력도 하지 않고 좋은 결과를 바라는 것은 어불성설이다.", "dictation": "그의 변명은 앞뒤가 전혀 맞지 않는 어불성설에 불과했다."}, {"word": "여실히", "definition": "숨김이나 거짓 없이 있는 그대로 뚜렷하게.", "example": "그의 낡은 운동화는 그동안의 고된 훈련을 여실히 보여준다.", "dictation": "이번 사태는 우리 사회의 문제점을 여실히 드러내었다."}, {"word": "역동적", "definition": "힘차고 활기차게 움직이는 상태.", "example": "무대 위 댄서들의 역동적인 춤사위에 관객들은 환호했다.", "dictation": "선수들의 역동적인 움직임이 경기의 분위기를 끌어올렸다."}, {"word": "연연하다", "definition": "어떤 것에 미련을 두어 집착하고 얽매이다.", "example": "이미 지나간 과거의 실수에 너무 연연할 필요는 없다.", "dictation": "작은 이익에 연연하다가 오히려 큰 기회를 놓치고 말았다."}, {"word": "오도하다", "definition": "잘못된 길로 이끌거나 사실을 그릇되게 전하다.", "example": "가짜 뉴스는 사람들의 판단을 오도할 위험이 매우 크다.", "dictation": "거짓된 정보로 대중의 여론을 오도하는 행위는 범죄이다."}, {"word": "와전되다", "definition": "사실과 다르게 잘못 전해지다.", "example": "내 말이 친구에게 와전되어 큰 오해가 생기고 말았다.", "dictation": "소문이 입에서 입을 거치며 전혀 다른 내용으로 와전되었다."}, {"word": "우롱하다", "definition": "사람을 바보 취급하며 우습게 보고 함부로 대하다.", "example": "소비자를 우롱하는 비양심적인 기업은 불매 운동을 겪는다.", "dictation": "거짓말로 국민을 우롱하는 정치인은 신뢰를 잃게 된다."}, {"word": "일조하다", "definition": "어떤 일을 이루는 데 한몫을 거들어 돕다.", "example": "나의 작은 습관 변화가 환경을 보호하는 데 일조하기를 바란다.", "dictation": "그의 꼼꼼한 준비가 프로젝트를 성공시키는 데 크게 일조했다."}, {"word": "자초하다", "definition": "자기가 스스로 나서서 불행이나 어려운 일을 불러들이다.", "example": "그는 무리한 투자를 하다가 결국 파산이라는 결과를 자초했다.", "dictation": "충고를 무시하고 제멋대로 행동하여 화를 자초하고 말았다."}, {"word": "전락하다", "definition": "나쁜 상태나 타락한 신세로 굴러떨어지다.", "example": "한때 잘나가던 기업이 빚더미에 앉아 빈털터리로 전락했다.", "dictation": "부주의한 관리로 인해 문화재가 흉물로 전락해 버렸다."}], "set8": [{"word": "절충하다", "definition": "서로 다른 의견을 조절하여 서로 알맞은 선에서 타협하다.", "example": "두 사람의 의견이 너무 달라 중간에서 절충점을 찾아야 한다.", "dictation": "양측의 입장을 조금씩 양보하여 합리적인 대안을 절충했다."}, {"word": "종속되다", "definition": "힘이 세거나 권력이 있는 대상에게 얽매여 딸리게 되다.", "example": "우리는 스마트폰에 너무 종속되어 스스로 생각하는 힘을 잃었다.", "dictation": "한 나라의 경제가 다른 나라에 완전히 종속되어서는 안 된다."}, {"word": "좌초되다", "definition": "배가 암초에 걸리거나, 어떤 일이나 계획이 중간에 실패로 돌아가다.", "example": "자금 부족으로 인해 야심 차게 준비한 계획이 좌초되고 말았다.", "dictation": "뜻밖의 난관에 부딪혀 협상이 완전히 좌초될 위기에 처했다."}, {"word": "주도권", "definition": "어떤 일이나 모임을 중심이 되어 이끌어 갈 수 있는 권리나 힘.", "example": "토론에서 논리적인 근거를 제시하여 주도권을 잡아야 한다.", "dictation": "경기의 흐름을 바꾸기 위해 공격의 주도권을 되찾아 왔다."}, {"word": "주안점", "definition": "가장 중요하게 여겨 특별히 관심을 두고 눈여겨보는 점.", "example": "이번 평가의 주안점은 창의성과 협동심을 얼마나 발휘했느냐이다.", "dictation": "글을 쓸 때는 독자의 흥미를 끄는 데 가장 큰 주안점을 두었다."}, {"word": "지향하다", "definition": "어떤 목표나 방향으로 나아가고자 뜻을 두다.", "example": "우리 학교는 폭력 없는 평화로운 교실을 지향하고 있습니다.", "dictation": "모든 사람이 평등하게 존중받는 정의로운 사회를 지향해야 한다."}, {"word": "진배없다", "definition": "그것과 비교해서 조금도 다를 바가 없다.", "example": "이 정도의 성과라면 사실상 우승이나 진배없는 훌륭한 결과다.", "dictation": "오랜 세월을 함께 해 온 우리는 친형제나 진배없는 사이다."}, {"word": "참작하다", "definition": "결정하기 전에 여러 가지 사정을 미리 참고하고 헤아려 생각하다.", "example": "벌을 줄 때는 그가 반성하고 있다는 점을 참작해 주어야 한다.", "dictation": "여러 가지 어려운 상황을 충분히 참작하여 기한을 연장해 주었다."}, {"word": "척도", "definition": "사물을 평가하거나 측정할 때 기준이 되는 자나 표준.", "example": "돈이 행복을 재는 유일한 척도가 될 수는 결코 없습니다.", "dictation": "학생의 능력을 성적이라는 단 하나의 척도로만 평가할 수는 없다."}, {"word": "초래하다", "definition": "어떤 결과나 사태를 불러일으켜 생겨나게 하다.", "example": "한순간의 방심이 돌이킬 수 없는 끔찍한 사고를 초래했다.", "dictation": "의사소통의 부족이 팀원들 사이에 심각한 오해를 초래했다."}], "set9": [{"word": "촉구하다", "definition": "어떤 일을 빨리 하라고 바쁘게 재촉하고 요구하다.", "example": "시민들은 정부에 환경 오염 문제에 대한 대책 마련을 촉구했다.", "dictation": "피해자들은 가해자의 진심 어린 사과와 반성을 강력히 촉구했다."}, {"word": "추이", "definition": "어떤 일이나 상태가 시간이 지남에 따라 변해 가는 모습.", "example": "바이러스의 확산 추이를 지켜본 뒤 휴교 여부를 결정할 것이다.", "dictation": "사건의 추이를 주의 깊게 살펴보고 신중하게 대처해야 한다."}, {"word": "치부하다", "definition": "어떤 것을 마음속으로 그러하다고 여겨 단정 지어 버리다.", "example": "그의 진심 어린 충고를 한낱 잔소리로 치부해서는 안 된다.", "dictation": "다른 사람의 고통을 단순한 엄살로 가볍게 치부해서는 안 된다."}, {"word": "치명적", "definition": "생명이나 일의 존망에 위험을 줄 만큼 아주 치명적인 상태.", "example": "방어구 없이 자전거를 타는 것은 사고 시 치명적인 부상을 입힌다.", "dictation": "그의 단 한 번의 실수는 회사에 치명적인 손실을 안겨주었다."}, {"word": "통감하다", "definition": "마음에 깊이 사무치도록 뼈저리게 느끼다.", "example": "이번 실패를 통해 준비 부족의 심각성을 뼈저리게 통감했다.", "dictation": "자신의 잘못에 대한 책임을 통감하고 자리에서 물러났다."}, {"word": "파장", "definition": "어떤 일이 사회에 미치는 충격이나 영향이 퍼져나가는 것.", "example": "유명 연예인의 거짓말 논란은 사회적으로 큰 파장을 일으켰다.", "dictation": "그 정책이 가져올 경제적 파장을 면밀하게 분석해야 한다."}, {"word": "팽배하다", "definition": "어떤 기운이나 사상 등이 매우 거세게 가득 차서 넘치다.", "example": "경기 침체로 인해 사람들 사이에 불안감이 팽배해 있다.", "dictation": "사회 전반에 이기주의가 팽배하여 서로 돕는 모습이 사라졌다."}, {"word": "편향되다", "definition": "한쪽으로만 치우쳐서 공정하거나 바르지 못하다.", "example": "편향된 시각으로 세상을 바라보면 진실을 제대로 볼 수 없다.", "dictation": "특정 집단에 유리하게 편향된 보도는 언론의 신뢰를 무너뜨린다."}, {"word": "표출하다", "definition": "마음속에 있는 생각이나 감정을 겉으로 드러내어 나타내다.", "example": "화가 난다고 해서 다른 사람에게 감정을 함부로 표출하면 안 된다.", "dictation": "예술가는 자신의 내면세계를 작품을 통해 자유롭게 표출한다."}, {"word": "허울", "definition": "실속은 없고 겉으로 드러나는 모습만 번듯한 것.", "example": "그는 사장이라는 허울만 썼을 뿐 실질적인 권한은 전혀 없었다.", "dictation": "겉보기에만 화려한 허울 좋은 명분은 아무런 소용이 없다."}], "set10": [{"word": "혁신적", "definition": "오래된 관습이나 제도를 완전히 바꾸어 새롭게 하는 상태.", "example": "그 회사는 혁신적인 기술을 개발하여 시장을 단숨에 장악했다.", "dictation": "기존의 틀을 깨는 혁신적인 아이디어가 세상을 바꾼다."}, {"word": "호도하다", "definition": "명확하게 결말을 내지 않고 흐지부지 덮어 숨기거나 속이다.", "example": "거짓 변명으로 사건의 본질을 호도하려는 태도를 버려야 한다.", "dictation": "자신의 잘못을 호도하기 위해 남에게 책임을 떠넘겨서는 안 된다."}, {"word": "환기하다", "definition": "잊었던 기억을 떠올리거나, 사람들의 주의와 관심을 불러일으키다.", "example": "선생님은 안전 수칙의 중요성을 학생들에게 다시 한번 환기하셨다.", "dictation": "이 공익광고는 환경 보호에 대한 대중의 인식을 환기하고 있다."}, {"word": "회의적", "definition": "어떤 일의 결과나 가치에 대해 의심을 품고 믿지 못하는 상태.", "example": "모두가 성공을 장담했지만, 그는 여전히 회의적인 태도를 보였다.", "dictation": "새로운 제도의 실효성에 대해 회의적인 시각이 적지 않다."}, {"word": "희석되다", "definition": "어떤 것의 농도가 묽어지거나 본래의 의미나 가치가 약해지다.", "example": "시간이 흐르면서 그 사건에 대한 사람들의 분노도 점차 희석되었다.", "dictation": "잦은 지각으로 인해 그의 성실했던 이미지가 많이 희석되었다."}, {"word": "경각심", "definition": "정신을 차리고 주의 깊게 살펴 경계하는 마음.", "example": "최근 잦은 화재 발생으로 인해 불조심에 대한 경각심이 높아졌다.", "dictation": "사고를 예방하기 위해 항상 안전에 대한 경각심을 가져야 한다."}, {"word": "궤변", "definition": "상대방을 속이거나 이기기 위해 억지로 끌어다 붙이는 논리.", "example": "자신의 이기적인 행동을 정당화하려는 그의 말은 궤변에 불과하다.", "dictation": "말도 안 되는 궤변으로 진실을 가리려는 시도는 통하지 않는다."}, {"word": "기염", "definition": "불꽃처럼 대단히 기운차고 씩씩한 기세나 태도.", "example": "우리나라 대표팀은 세계 대회에서 우승을 차지하는 기염을 토했다.", "dictation": "신인 선수가 결승전에서 놀라운 활약을 펼치며 기염을 토했다."}, {"word": "노골적", "definition": "숨기거나 감추지 않고 있는 그대로 솔직하게 겉으로 드러내는 상태.", "example": "그는 상대방을 향해 노골적으로 불쾌한 감정을 드러내었다.", "dictation": "나의 단점을 노골적으로 지적하는 그의 말에 기분이 상했다."}, {"word": "다분히", "definition": "어떤 성질이나 요소가 충분히 또는 많이.", "example": "그의 결정에는 개인적인 감정이 다분히 섞여 있는 것 같다.", "dictation": "이 소설은 작가의 실제 경험이 다분히 반영된 작품이다."}], "set11": [{"word": "당혹스럽다", "definition": "갑자기 뜻밖의 일을 당하여 어떻게 해야 할지 몰라 놀랍고 당황하다.", "example": "예상치 못한 날카로운 질문을 받고 나는 매우 당혹스러웠다.", "dictation": "처음 겪는 낯선 상황에 마주하여 모두가 당혹스러운 표정을 지었다."}, {"word": "도외시하다", "definition": "상관하지 않고 무시하거나 내버려 두다.", "example": "자신의 건강을 도외시하면서까지 무리하게 일해서는 안 된다.", "dictation": "소수의 의견이라고 해서 함부로 도외시하고 무시하면 안 된다."}, {"word": "무마하다", "definition": "시끄러운 일이나 불만을 달래어 조용히 가라앉히거나 덮어 없애다.", "example": "적당한 보상금으로 사람들의 분노를 무마하려고 시도했다.", "dictation": "잘못을 반성하지 않고 어설픈 변명으로 상황을 무마하려 했다."}, {"word": "미루어", "definition": "어떤 것을 근거로 삼아 다른 것을 짐작하거나 헤아려.", "example": "그의 평소 됨됨이로 미루어 보아 결코 거짓말을 할 사람이 아니다.", "dictation": "과거의 사례로 미루어 짐작건대 이번 일도 쉽게 해결될 것이다."}, {"word": "반발", "definition": "어떤 상태나 행동에 대하여 반대하여 강하게 튀어 오르거나 거스름.", "example": "일방적인 규칙 변경은 학생들의 거센 반발을 불러일으킬 것이다.", "dictation": "합리적인 설명이 없는 지시는 심한 반발에 부딪히기 마련이다."}, {"word": "발단", "definition": "어떤 일이 처음으로 시작되거나 사건이 일어나는 까닭이나 실마리.", "example": "아주 사소한 오해가 이번 큰 다툼의 발단이 되고 말았다.", "dictation": "모든 갈등의 발단은 서로 배려하지 않는 이기적인 태도에 있다."}, {"word": "번복하다", "definition": "이미 뱉은 말이나 내린 결정을 자꾸 이리저리 고치거나 뒤집다.", "example": "재판부는 증거 불충분으로 이전의 판결을 번복하여 무죄를 선고했다.", "dictation": "한 번 정해진 약속을 뚜렷한 이유 없이 자꾸 번복해서는 안 된다."}, {"word": "부조리", "definition": "사물의 이치에 맞지 않거나 사회의 도덕이나 질서에 어긋나는 일.", "example": "우리는 사회 곳곳에 숨어 있는 부조리를 없애기 위해 노력해야 한다.", "dictation": "부당한 차별과 부조리한 제도는 시급히 고쳐나가야 할 과제이다."}, {"word": "비일비재", "definition": "같은 일이나 현상이 한두 번이 아니고 자주 일어나 매우 흔함.", "example": "인터넷 상에서 익명성에 기대어 악플을 다는 일이 비일비재하다.", "dictation": "규칙을 위반하고도 부끄러워하지 않는 경우가 비일비재하게 일어난다."}, {"word": "빙자하다", "definition": "남의 힘을 빌려 의지하거나 어떤 것을 구실이나 핑계로 삼다.", "example": "그는 친한 친구라는 것을 빙자하여 돈을 빌리고 갚지 않았다.", "dictation": "공무를 빙자하여 개인적인 이익을 챙기는 것은 용납할 수 없다."}]};
+
+    const entries = Object.entries(DATA).flatMap(([setName, items], setIndex) =>
+      items.map((item, itemIndex) => ({
+        ...item,
+        setName,
+        setIndex,
+        itemIndex,
+      }))
+    );
+
+    const state = {
+      setName: "all",
+      query: "",
+    };
+
+    const filterRow = document.getElementById("filterRow");
+    const filtersBar = document.getElementById("filtersBar");
+    const cardGrid = document.getElementById("cardGrid");
+    const searchInput = document.getElementById("searchInput");
+    const countLabel = document.getElementById("countLabel");
+
+    const setKeys = Object.keys(DATA);
+    const HIDE_SCROLL_DISTANCE = 26;
+    const SHOW_SCROLL_DISTANCE = 72;
+    const TOP_VISIBLE_RANGE = 140;
+
+    let lastScrollY = window.scrollY;
+    let downScrollAccum = 0;
+    let upScrollAccum = 0;
+    let filtersVisible = true;
+
+    function formatSetLabel(setName) {
+      if (setName === "all") {
+        return "전체";
+      }
+      const number = Number(setName.replace("set", ""));
+      return Number.isNaN(number) ? setName : `SET ${String(number).padStart(2, "0")}`;
+    }
+
+    function buildFilterButtons() {
+      const names = ["all", ...setKeys];
+      filterRow.innerHTML = names
+        .map((name) => {
+          const active = state.setName === name ? "active" : "";
+          return `<button class="chip ${active}" type="button" data-set="${name}">${formatSetLabel(name)}</button>`;
+        })
+        .join("");
+
+      filterRow.querySelectorAll("[data-set]").forEach((button) => {
+        button.addEventListener("click", () => {
+          state.setName = button.dataset.set;
+          buildFilterButtons();
+          render();
+        });
+      });
+    }
+
+    function setFiltersVisible(visible) {
+      if (filtersVisible === visible) {
+        return;
+      }
+
+      filtersVisible = visible;
+      filtersBar.classList.toggle("is-hidden", !visible);
+    }
+
+    function handleScroll() {
+      const currentScrollY = window.scrollY;
+      const delta = currentScrollY - lastScrollY;
+
+      if (currentScrollY <= TOP_VISIBLE_RANGE) {
+        downScrollAccum = 0;
+        upScrollAccum = 0;
+        setFiltersVisible(true);
+        lastScrollY = currentScrollY;
+        return;
+      }
+
+      if (Math.abs(delta) < 2) {
+        lastScrollY = currentScrollY;
+        return;
+      }
+
+      if (delta > 0) {
+        downScrollAccum += delta;
+        upScrollAccum = 0;
+
+        if (downScrollAccum >= HIDE_SCROLL_DISTANCE) {
+          setFiltersVisible(false);
+          downScrollAccum = 0;
+        }
+      } else {
+        upScrollAccum += Math.abs(delta);
+        downScrollAccum = 0;
+
+        if (upScrollAccum >= SHOW_SCROLL_DISTANCE) {
+          setFiltersVisible(true);
+          upScrollAccum = 0;
+        }
+      }
+
+      lastScrollY = currentScrollY;
+    }
+
+    function getFilteredEntries() {
+      const query = state.query.trim().toLowerCase();
+
+      return entries.filter((entry) => {
+        const matchesSet = state.setName === "all" || entry.setName === state.setName;
+        if (!matchesSet) {
+          return false;
+        }
+
+        if (!query) {
+          return true;
+        }
+
+        const haystack = [entry.word, entry.definition, entry.example]
+          .join(" ")
+          .toLowerCase();
+        return haystack.includes(query);
+      });
+    }
+
+    function render() {
+      const filtered = getFilteredEntries();
+      countLabel.textContent = `${filtered.length} / ${entries.length}`;
+
+      if (filtered.length === 0) {
+        cardGrid.innerHTML = '<div class="empty">결과 없음</div>';
+        return;
+      }
+
+      cardGrid.innerHTML = filtered
+        .map((entry) => `
+          <article class="card">
+            <div class="card-top">
+              <h2 class="word">${entry.word}</h2>
+              <div class="set-tag">${formatSetLabel(entry.setName)}</div>
+            </div>
+            <p class="definition">${entry.definition}</p>
+            <div class="example-block">
+              <p class="example">${entry.example}</p>
+            </div>
+          </article>
+        `)
+        .join("");
+    }
+
+    searchInput.addEventListener("input", (event) => {
+      state.query = event.target.value;
+      render();
+    });
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+
+    buildFilterButtons();
+    render();
+  </script>
+</body>
+</html>
