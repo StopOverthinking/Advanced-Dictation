@@ -4,5 +4,6 @@ output/pdf/
 output/playwright/
 output/web/
 output/web-minimal/
+node_modules/
 *.pyc
 __pycache__/
