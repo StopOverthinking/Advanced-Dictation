@@ -12,5 +12,15 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      if (
+        location.hostname.endsWith("github.io") &&
+        document.querySelector('script[type="module"][src="/src/main.tsx"]')
+      ) {
+        const target = new URL("./docs/", location.href);
+        target.hash = location.hash;
+        location.replace(target);
+      }
+    </script>
   </body>
   </html>
