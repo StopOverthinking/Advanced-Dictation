@@ -832,18 +832,18 @@ function ScoresPage({ onNavigate }: { onNavigate: (route: RouteName) => void }) 
 }
 
 function AnswersPage({ onNavigate }: { onNavigate: (route: RouteName) => void }) {
-  const answers = getDictationProblemsForSet("set6");
+  const answers = getDictationProblemsForSet("set7");
 
   return (
     <div className="shell">
       <section className="hero hero-subpage">
         <div className="hero-top">
           <div className="hero-copy">
-            <h1>6주차</h1>
+            <h1>7주차</h1>
             <RouteBackButton onNavigate={onNavigate} />
-            <p className="subcopy">6주차 받아쓰기</p>
+            <p className="subcopy">7주차 받아쓰기</p>
           </div>
-          <div className="meta" aria-label="6주차 정답 요약">
+          <div className="meta" aria-label="7주차 정답 요약">
             <span>문항 {answers.length}</span>
           </div>
         </div>
