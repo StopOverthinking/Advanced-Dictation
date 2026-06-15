@@ -211,7 +211,7 @@ function HomeMenu({ onNavigate }: { onNavigate: (route: RouteName) => void }) {
           }}
         />
         <MenuButton
-          title="6주차"
+          title="7주차"
           description="받아쓰기 정답"
           href="#/answers"
           onNavigate={() => {
