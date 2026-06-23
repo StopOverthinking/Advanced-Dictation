@@ -858,6 +858,172 @@ h1 {
   gap: 8px;
 }
 
+.advanced-score-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.dictation-status-help {
+  padding: 12px 14px;
+  border: 1px dashed rgba(31, 95, 91, 0.18);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.54);
+}
+
+.dictation-status-note-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+}
+
+.dictation-status-item {
+  display: inline-flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dictation-status-item p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.dictation-status-pill {
+  color: var(--text);
+  font-size: 0.92rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.dictation-chart-panel,
+.dictation-round-card {
+  border: 1px solid rgba(31, 95, 91, 0.1);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.dictation-chart-panel {
+  padding: 18px 18px 10px;
+  overflow-x: auto;
+}
+
+.dictation-chart-panel svg {
+  display: block;
+  width: 100%;
+  min-width: 620px;
+  height: auto;
+}
+
+.dictation-grid-line {
+  stroke: rgba(31, 41, 51, 0.12);
+  stroke-width: 1;
+}
+
+.dictation-grid-column {
+  stroke: rgba(31, 41, 51, 0.08);
+  stroke-width: 1;
+}
+
+.dictation-baseline {
+  stroke: rgba(31, 41, 51, 0.2);
+  stroke-width: 1.4;
+}
+
+.dictation-axis-label,
+.dictation-score-label {
+  fill: var(--muted);
+  font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+}
+
+.dictation-axis-label {
+  font-size: 12px;
+}
+
+.dictation-line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 3;
+}
+
+.dictation-score-point {
+  fill: var(--accent);
+  stroke: #fff;
+  stroke-width: 3;
+}
+
+.dictation-score-label {
+  fill: var(--text);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.dictation-status-point {
+  fill: #fff;
+  stroke-width: 3;
+}
+
+.dictation-status-point.is-not-started {
+  stroke: #7a8694;
+}
+
+.dictation-status-point.is-not-submitted {
+  fill: #fff7ed;
+  stroke: #d97706;
+}
+
+.dictation-status-point.is-unavailable {
+  fill: #fef2f2;
+  stroke: #b91c1c;
+}
+
+.dictation-score-grid {
+  display: grid;
+  grid-template-columns: repeat(11, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.dictation-round-card {
+  min-width: 0;
+  padding: 14px 10px;
+  text-align: center;
+}
+
+.dictation-round-card.is-score {
+  background:
+    radial-gradient(circle at top, rgba(31, 95, 91, 0.14), rgba(255, 255, 255, 0.96)),
+    rgba(255, 255, 255, 0.86);
+}
+
+.dictation-round-card.is-not-submitted {
+  background: rgba(255, 247, 237, 0.92);
+}
+
+.dictation-round-card.is-not-started {
+  background: rgba(244, 247, 250, 0.94);
+}
+
+.dictation-round-card.is-unavailable {
+  background: rgba(254, 242, 242, 0.94);
+}
+
+.dictation-round-label {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+
+.dictation-round-value {
+  margin: 0;
+  color: var(--text);
+  font-size: 1.05rem;
+  font-weight: 800;
+  word-break: keep-all;
+}
+
 @media (max-width: 900px) {
   .menu-grid {
     grid-template-columns: repeat(2, minmax(150px, 180px));
@@ -875,6 +1041,10 @@ h1 {
   .problem-stat-grid,
   .answer-list {
     grid-template-columns: 1fr;
+  }
+
+  .dictation-score-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 
@@ -925,5 +1095,13 @@ h1 {
   .grader-table,
   .summary-table {
     min-width: 640px;
+  }
+
+  .dictation-score-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dictation-chart-panel {
+    padding: 12px 12px 8px;
   }
 }

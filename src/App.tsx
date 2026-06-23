@@ -1,5 +1,6 @@
 import { useDeferredValue, useEffect, useState, type FormEvent } from "react";
-import teacherResultsJson from "./generated/teacher-results.json";
+import advancedDictationResultsJson from "./generated/advanced-dictation-results.json";
+import studentAccountsJson from "./generated/student-accounts.json";
 import {
   formatSetLabel,
   getDictationProblemsForSet,
@@ -14,7 +15,7 @@ import { VocabularyGrid } from "./components/VocabularyGrid";
 import { useFilterBarVisibility } from "./hooks/useFilterBarVisibility";
 import type { TeacherResultsBundle, TeacherResultSession } from "./types";
 
-type RouteName = "home" | "vocab" | "answers" | "teacher";
+type RouteName = "home" | "vocab" | "answers" | "scores";
 type SessionDraft = Record<number, number[]>;
 type DraftState = Record<string, SessionDraft>;
 type SavedSessionMap = Record<string, TeacherResultSession>;
@@ -23,37 +24,47 @@ type StudentAccount = {
   name: string;
   password: string;
 };
+type AdvancedDictationScoreValue = number | string | null | undefined;
+type AdvancedDictationStudentScores = {
+  name: string;
+  results?: Record<string, AdvancedDictationScoreValue>;
+  rounds?: Record<string, AdvancedDictationScoreValue>;
+};
+type AdvancedDictationResultsBundle = {
+  scoreScale: number;
+  defaultStatus: string;
+  defaultStatusByRound: Record<string, string>;
+  statusHelp: Record<string, string>;
+  students: Record<string, AdvancedDictationStudentScores>;
+};
+type AdvancedDictationScoreRound = {
+  roundNumber: number;
+  label: string;
+  displayValue: string;
+} & (
+  | {
+      kind: "score";
+      score: number;
+    }
+  | {
+      kind: "status";
+      status: string;
+    }
+);
 
-const STUDENT_ACCOUNTS: StudentAccount[] = [
-  { number: 1, name: "고가민", password: "830291" },
-  { number: 2, name: "곽다현", password: "050607" },
-  { number: 3, name: "김희윤", password: "601141" },
-  { number: 4, name: "류가윤", password: "141102" },
-  { number: 5, name: "문지완", password: "140611" },
-  { number: 6, name: "박소영", password: "034600" },
-  { number: 7, name: "박연우", password: "140619" },
-  { number: 8, name: "박세빈", password: "140721" },
-  { number: 9, name: "박형우", password: "245844" },
-  { number: 10, name: "성장호", password: "140318" },
-  { number: 11, name: "송문주", password: "111213" },
-  { number: 12, name: "이원진", password: "676767" },
-  { number: 13, name: "이채린", password: "612807" },
-  { number: 14, name: "이하설", password: "141015" },
-  { number: 15, name: "전우수", password: "777567" },
-  { number: 16, name: "주은유", password: "141106" },
-  { number: 17, name: "지수현", password: "141125" },
-  { number: 18, name: "최규진", password: "918273" },
-  { number: 19, name: "최연준", password: "999999" },
-  { number: 20, name: "최예서", password: "141029" },
-  { number: 21, name: "홍석영", password: "140805" },
-];
+const STUDENT_ACCOUNTS = studentAccountsJson as StudentAccount[];
 const STUDENT_ACCOUNT_MAP = Object.fromEntries(
   STUDENT_ACCOUNTS.map((student) => [student.number, student]),
 ) as Record<number, StudentAccount>;
 const STUDENT_NUMBERS = STUDENT_ACCOUNTS.map((student) => student.number);
-const STATIC_TEACHER_RESULTS = teacherResultsJson as TeacherResultsBundle;
+const ADVANCED_DICTATION_RESULTS = advancedDictationResultsJson as AdvancedDictationResultsBundle;
 const TEACHER_PASSWORD = "8805";
 const TEACHER_ACCESS_STORAGE_KEY = "advanced-dictation-teacher-access";
+const ADVANCED_DICTATION_ROUND_COUNT = 11;
+const ADVANCED_DICTATION_STATUS_ORDER = ["미실시", "미제출", "확인 불가"];
+const scoreNumberFormatter = new Intl.NumberFormat("ko-KR", {
+  maximumFractionDigits: 1,
+});
 
 function getStudentAccount(studentNumber: number) {
   return STUDENT_ACCOUNT_MAP[studentNumber];
@@ -62,6 +73,97 @@ function getStudentAccount(studentNumber: number) {
 function formatStudentLabel(studentNumber: number) {
   const student = getStudentAccount(studentNumber);
   return student ? `${studentNumber}번 ${student.name}` : `${studentNumber}번`;
+}
+
+function formatScoreNumber(value: number) {
+  return scoreNumberFormatter.format(value);
+}
+
+function normalizeAdvancedDictationValue(value: AdvancedDictationScoreValue): AdvancedDictationScoreRound {
+  const scoreScale =
+    Number(ADVANCED_DICTATION_RESULTS.scoreScale) > 0
+      ? Number(ADVANCED_DICTATION_RESULTS.scoreScale)
+      : 10;
+  const defaultStatus = ADVANCED_DICTATION_RESULTS.defaultStatus || "미실시";
+
+  if (typeof value === "number" && Number.isFinite(value)) {
+    const score = Math.max(0, Math.min(scoreScale, Math.round(value * 2) / 2));
+
+    return {
+      kind: "score",
+      roundNumber: 0,
+      label: "",
+      score,
+      displayValue: `${formatScoreNumber(score)}점`,
+    };
+  }
+
+  const text = value === null || value === undefined ? "" : String(value).trim();
+  const numericValue = Number(text);
+
+  if (text && !Number.isNaN(numericValue)) {
+    const score = Math.max(0, Math.min(scoreScale, Math.round(numericValue * 2) / 2));
+
+    return {
+      kind: "score",
+      roundNumber: 0,
+      label: "",
+      score,
+      displayValue: `${formatScoreNumber(score)}점`,
+    };
+  }
+
+  const status = text || defaultStatus;
+
+  return {
+    kind: "status",
+    roundNumber: 0,
+    label: "",
+    status,
+    displayValue: status,
+  };
+}
+
+function getAdvancedDictationStudentData(studentNumber: number) {
+  return ADVANCED_DICTATION_RESULTS.students[String(studentNumber)] ?? null;
+}
+
+function getAdvancedDictationRounds(studentNumber: number): AdvancedDictationScoreRound[] {
+  const studentData = getAdvancedDictationStudentData(studentNumber);
+  const roundSource = studentData?.results ?? studentData?.rounds ?? {};
+
+  return Array.from({ length: ADVANCED_DICTATION_ROUND_COUNT }, (_, index) => {
+    const roundNumber = index + 1;
+    const rawValue =
+      roundSource[roundNumber] ??
+      roundSource[String(roundNumber)] ??
+      ADVANCED_DICTATION_RESULTS.defaultStatusByRound[String(roundNumber)] ??
+      ADVANCED_DICTATION_RESULTS.defaultStatusByRound[roundNumber] ??
+      ADVANCED_DICTATION_RESULTS.defaultStatus;
+    const normalized = normalizeAdvancedDictationValue(rawValue);
+
+    return {
+      ...normalized,
+      roundNumber,
+      label: `${roundNumber}회`,
+    };
+  });
+}
+
+function getAdvancedDictationStatusClass(status: string) {
+  if (status === "미제출") {
+    return "is-not-submitted";
+  }
+
+  if (status === "확인 불가") {
+    return "is-unavailable";
+  }
+
+  return "is-not-started";
+}
+
+function getRoundAriaLabel(rounds: AdvancedDictationScoreRound[]) {
+  return rounds.map((round) => `${round.label} ${round.displayValue}`).join(", ");
 }
 
 function matchesQuery(query: string, value: string) {
@@ -75,12 +177,12 @@ function getRouteFromHash(): RouteName {
     return "vocab";
   }
 
-  if (hash === "answers" || hash === "scores") {
+  if (hash === "answers") {
     return "answers";
   }
 
-  if (hash === "teacher") {
-    return "teacher";
+  if (hash === "scores" || hash === "teacher") {
+    return "scores";
   }
 
   return "home";
@@ -219,11 +321,11 @@ function HomeMenu({ onNavigate }: { onNavigate: (route: RouteName) => void }) {
           }}
         />
         <MenuButton
-          title="교사용"
-          description="문제 생성 · 채점"
-          href="#/teacher"
+          title="성적 확인"
+          description="비밀번호로 결과 보기"
+          href="#/scores"
           onNavigate={() => {
-            onNavigate("teacher");
+            onNavigate("scores");
           }}
         />
       </section>
@@ -606,55 +708,170 @@ function TeacherPage({ onNavigate }: { onNavigate: (route: RouteName) => void })
   );
 }
 
-function ScoresPage({ onNavigate }: { onNavigate: (route: RouteName) => void }) {
-  const sessions = [...STATIC_TEACHER_RESULTS.sessions].sort(
-    (left, right) => left.setNumber - right.setNumber,
+function ScoreTrendChart({ rounds }: { rounds: AdvancedDictationScoreRound[] }) {
+  const svgWidth = 780;
+  const svgHeight = 280;
+  const paddingLeft = 42;
+  const paddingRight = 18;
+  const paddingTop = 18;
+  const paddingBottom = 54;
+  const chartWidth = svgWidth - paddingLeft - paddingRight;
+  const chartHeight = svgHeight - paddingTop - paddingBottom;
+  const baselineY = paddingTop + chartHeight;
+  const scoreScale =
+    Number(ADVANCED_DICTATION_RESULTS.scoreScale) > 0
+      ? Number(ADVANCED_DICTATION_RESULTS.scoreScale)
+      : 10;
+  const stepX = rounds.length > 1 ? chartWidth / (rounds.length - 1) : 0;
+  const scoreTicks = Array.from({ length: scoreScale + 1 }, (_, index) => index).filter(
+    (value) => value === 0 || value === scoreScale || value % 2 === 0,
   );
-  const [studentNumber, setStudentNumber] = useState(STUDENT_ACCOUNTS[0]?.number ?? 1);
+  const points: Array<AdvancedDictationScoreRound & { x: number; y: number }> = rounds.map(
+    (round, index) => {
+      const x = paddingLeft + stepX * index;
+      const y =
+        round.kind === "score"
+          ? paddingTop + ((scoreScale - round.score) / scoreScale) * chartHeight
+          : baselineY;
+
+      return {
+        ...round,
+        x,
+        y,
+      };
+    },
+  );
+  const pathSegments: Array<typeof points> = [];
+  let currentSegment: typeof points = [];
+
+  points.forEach((point) => {
+    if (point.kind === "score") {
+      currentSegment.push(point);
+      return;
+    }
+
+    if (currentSegment.length > 1) {
+      pathSegments.push(currentSegment);
+    }
+
+    currentSegment = [];
+  });
+
+  if (currentSegment.length > 1) {
+    pathSegments.push(currentSegment);
+  }
+
+  return (
+    <section className="dictation-chart-panel" aria-label="심화 받아쓰기 성적 그래프">
+      <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} role="img" aria-label={getRoundAriaLabel(rounds)}>
+        {scoreTicks.map((tick) => {
+          const y = paddingTop + ((scoreScale - tick) / scoreScale) * chartHeight;
+
+          return (
+            <g key={`tick-${tick}`}>
+              <line
+                className="dictation-grid-line"
+                x1={paddingLeft}
+                y1={y}
+                x2={svgWidth - paddingRight}
+                y2={y}
+              />
+              <text className="dictation-axis-label" x={paddingLeft - 10} y={y + 4} textAnchor="end">
+                {tick}
+              </text>
+            </g>
+          );
+        })}
+
+        {points.map((point) => (
+          <g key={`column-${point.roundNumber}`}>
+            <line
+              className="dictation-grid-column"
+              x1={point.x}
+              y1={paddingTop}
+              x2={point.x}
+              y2={baselineY}
+            />
+            <text className="dictation-axis-label" x={point.x} y={svgHeight - 14} textAnchor="middle">
+              {point.label}
+            </text>
+          </g>
+        ))}
+
+        <line
+          className="dictation-baseline"
+          x1={paddingLeft}
+          y1={baselineY}
+          x2={svgWidth - paddingRight}
+          y2={baselineY}
+        />
+
+        {pathSegments.map((segment, index) => {
+          const path = segment
+            .map((point, pointIndex) => `${pointIndex === 0 ? "M" : "L"} ${point.x} ${point.y}`)
+            .join(" ");
+
+          return <path key={`line-${index}`} className="dictation-line" d={path} />;
+        })}
+
+        {points
+          .filter((point) => point.kind === "score")
+          .map((point) => (
+            <g key={`score-${point.roundNumber}`}>
+              <circle className="dictation-score-point" cx={point.x} cy={point.y} r="5" />
+              <text className="dictation-score-label" x={point.x} y={point.y - 12} textAnchor="middle">
+                {formatScoreNumber(point.score)}
+              </text>
+            </g>
+          ))}
+
+        {points
+          .filter((point) => point.kind === "status")
+          .map((point) => (
+            <circle
+              key={`status-${point.roundNumber}`}
+              className={`dictation-status-point ${getAdvancedDictationStatusClass(point.status)}`}
+              cx={point.x}
+              cy={baselineY}
+              r="6"
+            />
+          ))}
+      </svg>
+    </section>
+  );
+}
+
+function ScoresPage({ onNavigate }: { onNavigate: (route: RouteName) => void }) {
   const [password, setPassword] = useState("");
   const [authenticatedStudentNumber, setAuthenticatedStudentNumber] = useState<number | null>(null);
   const [error, setError] = useState("");
   const authenticatedStudent = authenticatedStudentNumber
     ? getStudentAccount(authenticatedStudentNumber)
     : null;
-  const studentSessions = authenticatedStudent
-    ? sessions
-        .map((session) => {
-          const result = session.studentResults.find(
-            (item) => item.studentNumber === authenticatedStudent.number,
-          );
-
-          if (!result) {
-            return null;
-          }
-
-          return {
-            session,
-            result,
-            missedProblems: session.problems.filter((problem) =>
-              result.missedProblemNumbers.includes(problem.number),
-            ),
-          };
-        })
-        .filter((entry) => entry !== null)
-    : [];
-  const totalCorrect = studentSessions.reduce((total, entry) => total + entry.result.correctCount, 0);
-  const totalWrong = studentSessions.reduce((total, entry) => total + entry.result.wrongCount, 0);
-  const totalQuestions = studentSessions.reduce(
-    (total, entry) => total + entry.session.problemCount,
-    0,
-  );
-  const overallAccuracy = totalQuestions
-    ? Number(((totalCorrect / totalQuestions) * 100).toFixed(1))
+  const rounds = authenticatedStudent ? getAdvancedDictationRounds(authenticatedStudent.number) : [];
+  const scoreRounds = rounds.filter((round) => round.kind === "score");
+  const averageScore = scoreRounds.length
+    ? scoreRounds.reduce((total, round) => total + round.score, 0) / scoreRounds.length
     : 0;
+  let latestRound = rounds[rounds.length - 1];
+
+  for (let index = rounds.length - 1; index >= 0; index -= 1) {
+    if (rounds[index].kind === "score") {
+      latestRound = rounds[index];
+      break;
+    }
+  }
+  const statusHelpEntries = ADVANCED_DICTATION_STATUS_ORDER.filter((status) =>
+    Boolean(ADVANCED_DICTATION_RESULTS.statusHelp[status]),
+  );
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const student = getStudentAccount(studentNumber);
+    const student = STUDENT_ACCOUNTS.find((candidate) => candidate.password === password.trim());
 
-    if (!student || student.password !== password) {
-      setError("이름이나 비밀번호를 다시 확인해 주세요.");
+    if (!student) {
+      setError("비밀번호를 다시 확인해 주세요.");
       return;
     }
 
@@ -674,48 +891,20 @@ function ScoresPage({ onNavigate }: { onNavigate: (route: RouteName) => void }) 
       <section className="hero hero-subpage">
         <div className="hero-top">
           <div className="hero-copy">
-            <h1>결과 통계</h1>
+            <h1>성적 확인</h1>
             <RouteBackButton onNavigate={onNavigate} />
             {authenticatedStudent ? <p className="subcopy">{authenticatedStudent.name}</p> : null}
           </div>
-          <div className="meta" aria-label="통계 요약">
-            <span>회차 {sessions.length}</span>
-            <span>업데이트 {formatDateTime(STATIC_TEACHER_RESULTS.exportedAt)}</span>
+          <div className="meta" aria-label="성적 확인 요약">
+            <span>회차 {ADVANCED_DICTATION_ROUND_COUNT}</span>
+            <span>{ADVANCED_DICTATION_RESULTS.scoreScale}점 만점</span>
           </div>
         </div>
       </section>
 
-      {sessions.length === 0 ? (
-        <section className="panel">
-          <div className="empty-panel empty-panel-large">
-            <strong>아직 통계 데이터가 없습니다.</strong>
-            <p>교사용 메뉴에서 JSON을 만든 뒤 `src/generated/teacher-results.json`으로 교체하고 빌드하면 이 화면이 채워집니다.</p>
-          </div>
-        </section>
-      ) : !authenticatedStudent ? (
+      {!authenticatedStudent ? (
         <section className="panel access-panel">
           <form className="password-form" onSubmit={handleSubmit}>
-            <label className="password-label" htmlFor="student-number">
-              이름
-            </label>
-            <select
-              id="student-number"
-              className="student-select"
-              value={studentNumber}
-              onChange={(event) => {
-                setStudentNumber(Number(event.target.value));
-                if (error) {
-                  setError("");
-                }
-              }}
-            >
-              {STUDENT_ACCOUNTS.map((student) => (
-                <option key={student.number} value={student.number}>
-                  {formatStudentLabel(student.number)}
-                </option>
-              ))}
-            </select>
-
             <label className="password-label" htmlFor="student-password">
               비밀번호
             </label>
@@ -735,7 +924,7 @@ function ScoresPage({ onNavigate }: { onNavigate: (route: RouteName) => void }) 
             />
             {error ? <p className="form-error">{error}</p> : null}
             <button className="shape-button button-accent" type="submit">
-              내 결과 보기
+              성적 확인
             </button>
           </form>
         </section>
@@ -743,24 +932,26 @@ function ScoresPage({ onNavigate }: { onNavigate: (route: RouteName) => void }) 
         <>
           <section className="stats-grid">
             <article className="stat-card">
-              <span className="stat-value">{studentSessions.length}</span>
-              <span className="stat-label">응시 회차</span>
+              <span className="stat-value">{scoreRounds.length}</span>
+              <span className="stat-label">점수 입력 회차</span>
             </article>
             <article className="stat-card">
-              <span className="stat-value">{overallAccuracy}%</span>
-              <span className="stat-label">내 정확도</span>
+              <span className="stat-value">
+                {scoreRounds.length ? `${formatScoreNumber(averageScore)}점` : "-"}
+              </span>
+              <span className="stat-label">평균 점수</span>
             </article>
             <article className="stat-card">
-              <span className="stat-value">{totalWrong}</span>
-              <span className="stat-label">총 오답 수</span>
+              <span className="stat-value">{latestRound?.displayValue ?? "-"}</span>
+              <span className="stat-label">최근 결과</span>
             </article>
           </section>
 
           <section className="panel">
             <div className="panel-head">
-              <h2>내 결과</h2>
+              <h2>내 성적</h2>
               <button className="shape-button button-muted" type="button" onClick={handleLogout}>
-                다른 학생으로 보기
+                다른 비밀번호 입력
               </button>
             </div>
 
@@ -771,58 +962,48 @@ function ScoresPage({ onNavigate }: { onNavigate: (route: RouteName) => void }) 
                 <em>로그인 완료</em>
               </article>
               <article className="problem-stat">
-                <strong>맞은 개수</strong>
-                <span>{totalCorrect}</span>
-                <em>전체 누적</em>
+                <strong>입력된 점수</strong>
+                <span>{scoreRounds.length}회</span>
+                <em>미실시와 미제출 제외</em>
               </article>
               <article className="problem-stat">
-                <strong>틀린 개수</strong>
-                <span>{totalWrong}</span>
-                <em>전체 누적</em>
+                <strong>기준</strong>
+                <span>{ADVANCED_DICTATION_RESULTS.scoreScale}점 만점</span>
+                <em>0.5점 단위</em>
               </article>
             </div>
           </section>
 
-          <section className="panel">
+          <section className="panel advanced-score-panel">
             <div className="panel-head">
-              <h2>회차별 결과</h2>
+              <h2>심화 받아쓰기 결과</h2>
             </div>
-            <div className="session-grid">
-              {studentSessions.map((entry) => {
-                return (
-                  <article key={entry.session.setName} className="session-card">
-                    <div className="session-head">
-                      <div>
-                        <h3>{entry.session.label}</h3>
-                        <p>{entry.session.problemCount}문항</p>
-                      </div>
-                      <div className="session-meta">
-                        <span>정확도 {entry.result.accuracy}%</span>
-                        <span>오답 {entry.result.wrongCount}</span>
-                      </div>
-                    </div>
 
-                    {entry.missedProblems.length === 0 ? (
-                      <div className="empty-panel">
-                        <strong>모두 맞았습니다.</strong>
-                      </div>
-                    ) : (
-                      <div className="problem-stat-grid">
-                        {entry.missedProblems.map((problem) => (
-                          <article
-                            key={`${entry.session.setName}-${problem.number}`}
-                            className="problem-stat"
-                          >
-                            <strong>Q{problem.number}</strong>
-                            <span>{problem.word}</span>
-                            <em>{problem.dictation}</em>
-                          </article>
-                        ))}
-                      </div>
-                    )}
+            <div className="dictation-status-help">
+              <div className="dictation-status-note-list">
+                {statusHelpEntries.map((status) => (
+                  <article key={status} className="dictation-status-item">
+                    <span className="dictation-status-pill">{status}</span>
+                    <p>{ADVANCED_DICTATION_RESULTS.statusHelp[status]}</p>
                   </article>
-                );
-              })}
+                ))}
+              </div>
+            </div>
+
+            <ScoreTrendChart rounds={rounds} />
+
+            <div className="dictation-score-grid" aria-label="회차별 심화 받아쓰기 성적">
+              {rounds.map((round) => (
+                <article
+                  key={round.roundNumber}
+                  className={`dictation-round-card ${
+                    round.kind === "score" ? "is-score" : getAdvancedDictationStatusClass(round.status)
+                  }`}
+                >
+                  <p className="dictation-round-label">{round.label}</p>
+                  <p className="dictation-round-value">{round.displayValue}</p>
+                </article>
+              ))}
             </div>
           </section>
         </>
@@ -868,18 +1049,10 @@ function AnswersPage({ onNavigate }: { onNavigate: (route: RouteName) => void })
 
 export default function App() {
   const [route, setRoute] = useState<RouteName>(() => getRouteFromHash());
-  const [isTeacherUnlocked, setIsTeacherUnlocked] = useState(() => {
-    return window.sessionStorage.getItem(TEACHER_ACCESS_STORAGE_KEY) === "granted";
-  });
 
   function navigate(routeName: RouteName) {
     setRoute(routeName);
     window.location.hash = getHashForRoute(routeName);
-  }
-
-  function unlockTeacherAccess() {
-    window.sessionStorage.setItem(TEACHER_ACCESS_STORAGE_KEY, "granted");
-    setIsTeacherUnlocked(true);
   }
 
   useEffect(() => {
@@ -901,12 +1074,8 @@ export default function App() {
     return <AnswersPage onNavigate={navigate} />;
   }
 
-  if (route === "teacher") {
-    if (!isTeacherUnlocked) {
-      return <TeacherAccessGate onNavigate={navigate} onUnlock={unlockTeacherAccess} />;
-    }
-
-    return <TeacherPage onNavigate={navigate} />;
+  if (route === "scores") {
+    return <ScoresPage onNavigate={navigate} />;
   }
 
   return <HomeMenu onNavigate={navigate} />;
