@@ -60,6 +60,7 @@ const STUDENT_NUMBERS = STUDENT_ACCOUNTS.map((student) => student.number);
 const ADVANCED_DICTATION_RESULTS = advancedDictationResultsJson as AdvancedDictationResultsBundle;
 const TEACHER_PASSWORD = "8805";
 const TEACHER_ACCESS_STORAGE_KEY = "advanced-dictation-teacher-access";
+const MASTER_PASSWORD = "!!!!!!";
 const ADVANCED_DICTATION_ROUND_COUNT = 11;
 const ADVANCED_DICTATION_STATUS_ORDER = ["미실시", "미제출", "확인 불가"];
 const scoreNumberFormatter = new Intl.NumberFormat("ko-KR", {
@@ -844,6 +845,7 @@ function ScoreTrendChart({ rounds }: { rounds: AdvancedDictationScoreRound[] }) 
 function ScoresPage({ onNavigate }: { onNavigate: (route: RouteName) => void }) {
   const [password, setPassword] = useState("");
   const [authenticatedStudentNumber, setAuthenticatedStudentNumber] = useState<number | null>(null);
+  const [isMasterMode, setIsMasterMode] = useState(false);
   const [error, setError] = useState("");
   const authenticatedStudent = authenticatedStudentNumber
     ? getStudentAccount(authenticatedStudentNumber)
@@ -868,19 +870,37 @@ function ScoresPage({ onNavigate }: { onNavigate: (route: RouteName) => void }) 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const student = STUDENT_ACCOUNTS.find((candidate) => candidate.password === password.trim());
+    const normalizedPassword = password.trim();
+
+    if (normalizedPassword === MASTER_PASSWORD) {
+      setIsMasterMode(true);
+      setAuthenticatedStudentNumber(null);
+      setPassword("");
+      setError("");
+      return;
+    }
+
+    const student = STUDENT_ACCOUNTS.find((candidate) => candidate.password === normalizedPassword);
 
     if (!student) {
       setError("비밀번호를 다시 확인해 주세요.");
       return;
     }
 
+    setIsMasterMode(false);
     setAuthenticatedStudentNumber(student.number);
     setPassword("");
     setError("");
   }
 
   function handleLogout() {
+    setIsMasterMode(false);
+    setAuthenticatedStudentNumber(null);
+    setPassword("");
+    setError("");
+  }
+
+  function handleBackToMasterList() {
     setAuthenticatedStudentNumber(null);
     setPassword("");
     setError("");
@@ -894,6 +914,7 @@ function ScoresPage({ onNavigate }: { onNavigate: (route: RouteName) => void }) 
             <h1>성적 확인</h1>
             <RouteBackButton onNavigate={onNavigate} />
             {authenticatedStudent ? <p className="subcopy">{authenticatedStudent.name}</p> : null}
+            {!authenticatedStudent && isMasterMode ? <p className="subcopy">마스터 모드</p> : null}
           </div>
           <div className="meta" aria-label="성적 확인 요약">
             <span>회차 {ADVANCED_DICTATION_ROUND_COUNT}</span>
@@ -902,7 +923,35 @@ function ScoresPage({ onNavigate }: { onNavigate: (route: RouteName) => void }) 
         </div>
       </section>
 
-      {!authenticatedStudent ? (
+      {!authenticatedStudent && isMasterMode ? (
+        <section className="panel master-score-panel">
+          <div className="panel-head">
+            <div>
+              <h2>학생 선택</h2>
+              <span className="panel-note">총 {STUDENT_ACCOUNTS.length}명</span>
+            </div>
+            <button className="shape-button button-muted" type="button" onClick={handleLogout}>
+              다른 비밀번호 입력
+            </button>
+          </div>
+
+          <div className="master-student-list" aria-label="학생 목록">
+            {STUDENT_ACCOUNTS.map((student) => (
+              <button
+                key={student.number}
+                className="master-student-button"
+                type="button"
+                onClick={() => {
+                  setAuthenticatedStudentNumber(student.number);
+                }}
+              >
+                <span className="student-row-number">{student.number}번</span>
+                <span className="student-row-name">{student.name}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+      ) : !authenticatedStudent ? (
         <section className="panel access-panel">
           <form className="password-form" onSubmit={handleSubmit}>
             <label className="password-label" htmlFor="student-password">
@@ -950,9 +999,15 @@ function ScoresPage({ onNavigate }: { onNavigate: (route: RouteName) => void }) 
           <section className="panel">
             <div className="panel-head">
               <h2>내 성적</h2>
-              <button className="shape-button button-muted" type="button" onClick={handleLogout}>
-                다른 비밀번호 입력
-              </button>
+              {isMasterMode ? (
+                <button className="shape-button button-muted" type="button" onClick={handleBackToMasterList}>
+                  학생 선택
+                </button>
+              ) : (
+                <button className="shape-button button-muted" type="button" onClick={handleLogout}>
+                  다른 비밀번호 입력
+                </button>
+              )}
             </div>
 
             <div className="student-summary-grid">

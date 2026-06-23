@@ -858,6 +858,35 @@ h1 {
   gap: 8px;
 }
 
+.master-score-panel {
+  display: grid;
+  gap: 18px;
+}
+
+.master-student-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.master-student-button {
+  width: 100%;
+  min-height: 72px;
+  border: 1px solid rgba(31, 95, 91, 0.1);
+  border-radius: 16px;
+  background: rgba(244, 248, 247, 0.9);
+  color: var(--text);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  gap: 4px;
+}
+
+.master-student-button:hover {
+  transform: translateY(-1px);
+  background: rgba(220, 236, 231, 0.82);
+}
+
 .advanced-score-panel {
   display: grid;
   gap: 16px;
@@ -1037,6 +1066,7 @@ h1 {
   .session-grid,
   .stats-grid,
   .student-summary-grid,
+  .master-student-list,
   .question-list,
   .problem-stat-grid,
   .answer-list {
