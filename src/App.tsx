@@ -912,7 +912,19 @@ function ScoresPage({ onNavigate }: { onNavigate: (route: RouteName) => void }) 
         <div className="hero-top">
           <div className="hero-copy">
             <h1>성적 확인</h1>
-            <RouteBackButton onNavigate={onNavigate} />
+            <div className="top-menu-row">
+              <RouteBackButton onNavigate={onNavigate} />
+              {authenticatedStudent && isMasterMode ? (
+                <button className="shape-button button-muted" type="button" onClick={handleBackToMasterList}>
+                  학생 선택
+                </button>
+              ) : null}
+              {authenticatedStudent ? (
+                <button className="shape-button button-muted" type="button" onClick={handleLogout}>
+                  다른 비밀번호 입력
+                </button>
+              ) : null}
+            </div>
             {authenticatedStudent ? <p className="subcopy">{authenticatedStudent.name}</p> : null}
             {!authenticatedStudent && isMasterMode ? <p className="subcopy">마스터 모드</p> : null}
           </div>
@@ -994,39 +1006,6 @@ function ScoresPage({ onNavigate }: { onNavigate: (route: RouteName) => void }) 
               <span className="stat-value">{latestRound?.displayValue ?? "-"}</span>
               <span className="stat-label">최근 결과</span>
             </article>
-          </section>
-
-          <section className="panel">
-            <div className="panel-head">
-              <h2>내 성적</h2>
-              {isMasterMode ? (
-                <button className="shape-button button-muted" type="button" onClick={handleBackToMasterList}>
-                  학생 선택
-                </button>
-              ) : (
-                <button className="shape-button button-muted" type="button" onClick={handleLogout}>
-                  다른 비밀번호 입력
-                </button>
-              )}
-            </div>
-
-            <div className="student-summary-grid">
-              <article className="problem-stat">
-                <strong>학생</strong>
-                <span>{formatStudentLabel(authenticatedStudent.number)}</span>
-                <em>로그인 완료</em>
-              </article>
-              <article className="problem-stat">
-                <strong>입력된 점수</strong>
-                <span>{scoreRounds.length}회</span>
-                <em>미실시와 미제출 제외</em>
-              </article>
-              <article className="problem-stat">
-                <strong>기준</strong>
-                <span>{ADVANCED_DICTATION_RESULTS.scoreScale}점 만점</span>
-                <em>0.5점 단위</em>
-              </article>
-            </div>
           </section>
 
           <section className="panel advanced-score-panel">
