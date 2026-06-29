@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>심화 받아쓰기 결과 편집기</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="./advanced-dictation-editor.css" />
+  </head>
+  <body>
+    <main class="page-shell">
+      <header class="hero">
+        <div class="hero-top">
+          <div>
+            <p class="eyebrow">Simple Editor</p>
+            <h1>심화 받아쓰기 결과 편집기</h1>
+            <p class="hero-copy">학생별 1회~11회 결과를 바로 수정합니다.</p>
+          </div>
+        </div>
+      </header>
+
+      <section class="card editor-card">
+        <div class="editor-toolbar">
+          <div class="editor-toolbar-group">
+            <button id="load-file-button" type="button" class="secondary-button">JS 불러오기</button>
+            <button id="save-file-button" type="button" class="secondary-button">파일로 저장</button>
+            <button id="download-file-button" type="button" class="secondary-button">JS 다운로드</button>
+            <button id="copy-file-button" type="button" class="secondary-button">JS 복사</button>
+          </div>
+          <div class="editor-status-group">
+            <span id="editor-state-badge" class="badge badge-light">저장됨</span>
+            <p id="editor-status" class="editor-status" aria-live="polite"></p>
+          </div>
+        </div>
+
+        <div class="editor-action-help">
+          <p><strong>JS 불러오기</strong>: 기존 `advanced-dictation-results.js` 내용을 다시 읽어 표에 채웁니다.</p>
+          <p><strong>파일로 저장</strong>: 저장 위치를 고른 뒤 그 파일을 바로 씁니다.</p>
+          <p><strong>JS 다운로드</strong>: 다운로드 파일만 만들고, 현재 폴더 파일은 바꾸지 않습니다.</p>
+        </div>
+
+        <div class="editor-help-row">
+          <span class="badge badge-light">점수 단위: 0.5점</span>
+          <span class="badge badge-light">1회 기본값: 미제출</span>
+          <span class="badge badge-light">11회 기본값: 미실시</span>
+          <span class="badge badge-light">그 외 미입력: 미실시</span>
+        </div>
+
+        <div id="editor-status-help" class="editor-status-help"></div>
+
+        <div class="editor-table-frame">
+          <table class="editor-table">
+            <thead id="editor-table-head"></thead>
+            <tbody id="editor-table-body"></tbody>
+          </table>
+        </div>
+
+        <section class="editor-preview-panel">
+          <div class="editor-preview-head">
+            <h2>저장될 내용</h2>
+            <button id="refresh-preview-button" type="button" class="secondary-button">미리보기 새로고침</button>
+          </div>
+          <textarea id="editor-preview" class="editor-preview" spellcheck="false" readonly></textarea>
+        </section>
+      </section>
+    </main>
+
+    <input id="load-file-input" type="file" accept=".js,text/javascript" hidden />
+    <script src="./data.js"></script>
+    <script src="./advanced-dictation-results.js"></script>
+    <script src="./advanced-dictation-editor.js"></script>
+  </body>
+</html>
