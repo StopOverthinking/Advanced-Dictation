@@ -78,6 +78,7 @@
 }
 
 .editor-table {
+  --editor-number-col-width: 76px;
   width: 100%;
   min-width: 1180px;
   border-collapse: collapse;
@@ -115,13 +116,24 @@
 
 .editor-table td:first-child,
 .editor-table th:first-child {
-  width: 76px;
+  width: var(--editor-number-col-width);
+  min-width: var(--editor-number-col-width);
 }
 
 .editor-table td:nth-child(2),
 .editor-table th:nth-child(2) {
+  position: sticky;
+  left: var(--editor-number-col-width);
+  z-index: 2;
   min-width: 108px;
   text-align: left;
+  background: rgba(250, 251, 252, 0.98);
+  box-shadow: inset -1px 0 0 rgba(24, 47, 59, 0.08);
+}
+
+.editor-table thead th:first-child,
+.editor-table thead th:nth-child(2) {
+  z-index: 3;
 }
 
 .editor-student-name {

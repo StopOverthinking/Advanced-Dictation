@@ -7,11 +7,10 @@ const editorStatusHelp = document.querySelector("#editor-status-help");
 const loadFileButton = document.querySelector("#load-file-button");
 const loadFileInput = document.querySelector("#load-file-input");
 const saveFileButton = document.querySelector("#save-file-button");
-const downloadFileButton = document.querySelector("#download-file-button");
-const copyFileButton = document.querySelector("#copy-file-button");
 const refreshPreviewButton = document.querySelector("#refresh-preview-button");
 
 const roundNumbers = Array.from({ length: 11 }, (_, index) => index + 1);
+const RESULT_JSON_PATH = "./src/generated/advanced-dictation-results.json";
 const FILE_HANDLE_DB_NAME = "check-my-record-file-handles";
 const FILE_HANDLE_STORE_NAME = "handles";
 const LAST_SAVE_HANDLE_KEY = "advanced-dictation-last-save-handle";
@@ -33,7 +32,16 @@ const scoreOptions = [
 ];
 
 const appData = window.APP_DATA || {};
-let advancedDictationData = window.ADVANCED_DICTATION_RESULTS || {};
+let advancedDictationData = {
+  scoreScale: 10,
+  defaultStatus: "미실시",
+  defaultStatusByRound: {
+    1: "미제출",
+    11: "미실시",
+  },
+  statusHelp: ADVANCED_DICTATION_STATUS_HELP_DEFAULTS,
+  students: {},
+};
 let advancedDictationStudents = advancedDictationData.students || {};
 let defaultStatus = advancedDictationData.defaultStatus || "미실시";
 let defaultStatusByRound = advancedDictationData.defaultStatusByRound || {
@@ -296,34 +304,12 @@ function buildExportData() {
   };
 }
 
-function buildExportText() {
-  const payload = buildExportData();
-
-  return `/*
-  이 파일만 수정하면 "심화 받아쓰기 결과" 화면이 바로 바뀝니다.
-
-  수정 방법
-  1. 아래 students 안에서 학생 번호를 찾습니다.
-  2. results 안에 회차 번호를 넣고 점수를 적습니다.
-  3. 값은 0~10 사이의 0.5 단위 숫자 또는 "미실시", "미제출", "확인 불가"만 사용합니다.
-
-  표시 규칙
-  - 미실시: 아직 시험을 치르지 않음
-  - 미제출: 시험을 치렀으나 오답 고쳐쓰기 숙제를 완료하지 않음
-  - 확인 불가: 시험을 치렀으나 시험지 분실 등으로 점수 확인 불가능
-
-  기본값
-  - 1회: 미제출
-  - 11회: 미실시
-  - 그 밖에 입력하지 않은 회차: 미실시
-*/
-
-window.ADVANCED_DICTATION_RESULTS = ${JSON.stringify(payload, null, 2)};
-`;
+function buildExportJsonText() {
+  return `${JSON.stringify(buildExportData(), null, 2)}\n`;
 }
 
 function updatePreview() {
-  editorPreview.value = buildExportText();
+  editorPreview.value = buildExportJsonText();
 }
 
 function openHandleDatabase() {
@@ -436,13 +422,8 @@ async function forgetLastSaveHandle() {
 }
 
 function parseAdvancedDictationText(fileText) {
-  const match = fileText.match(/window\.ADVANCED_DICTATION_RESULTS\s*=\s*([\s\S]*?);\s*$/);
-
-  if (!match) {
-    throw new Error("ADVANCED_DICTATION_RESULTS 객체를 찾지 못했습니다.");
-  }
-
-  const payload = Function(`"use strict"; return (${match[1]});`)();
+  const trimmedText = fileText.trim();
+  const payload = JSON.parse(trimmedText);
 
   if (!payload || typeof payload !== "object") {
     throw new Error("결과 데이터를 읽지 못했습니다.");
@@ -472,47 +453,141 @@ async function readFileText(file) {
   });
 }
 
-async function importFromFile(file) {
+async function getLastResultFileHandle() {
+  const handle = await getLastSaveHandle();
+
+  if (!handle || handle.kind !== "file" || typeof handle.getFile !== "function") {
+    return null;
+  }
+
+  return handle;
+}
+
+async function requestHandlePermission(handle, mode) {
+  if (typeof handle.queryPermission !== "function") {
+    return "granted";
+  }
+
+  const permissionOptions = { mode };
+  const currentPermission = await handle.queryPermission(permissionOptions);
+
+  if (currentPermission === "granted") {
+    return currentPermission;
+  }
+
+  if (typeof handle.requestPermission !== "function") {
+    return currentPermission;
+  }
+
+  try {
+    return handle.requestPermission(permissionOptions);
+  } catch (error) {
+    console.warn("이전 결과 JSON 파일 권한을 자동으로 다시 요청하지 못했습니다.", error);
+    return currentPermission;
+  }
+}
+
+async function readDataFromStoredHandle() {
+  const handle = await getLastResultFileHandle();
+
+  if (!handle) {
+    return {
+      status: "empty",
+    };
+  }
+
+  const permissionState = await requestHandlePermission(handle, "read");
+
+  if (permissionState !== "granted") {
+    return {
+      status: "permission-needed",
+      fileName: handle.name || "이전 결과 JSON",
+    };
+  }
+
+  const file = await handle.getFile();
+  const fileText = await readFileText(file);
+
+  return {
+    status: "loaded",
+    fileName: file.name,
+    data: parseAdvancedDictationText(fileText),
+  };
+}
+
+function applyPickerStartIn(pickerOptions, handle) {
+  if (handle) {
+    pickerOptions.startIn = handle;
+  }
+}
+
+async function loadDefaultResultJson() {
+  const response = await fetch(`${RESULT_JSON_PATH}?v=${Date.now()}`, {
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(`${RESULT_JSON_PATH} 파일을 읽지 못했습니다.`);
+  }
+
+  return response.json();
+}
+
+async function importFromFile(file, options = {}) {
+  const { handle = null } = options;
   const fileText = await readFileText(file);
   const parsed = parseAdvancedDictationText(fileText);
   applyLoadedData(parsed);
+
+  if (handle) {
+    await rememberLastSaveHandle(handle);
+  }
+
   setStatus(`${file.name} 기준으로 표를 다시 불러왔습니다.`);
 }
 
 async function openLoadPicker() {
-  if (isDirty && !window.confirm("현재 변경 내용을 덮어쓰고 JS 파일을 불러올까요?")) {
+  if (isDirty && !window.confirm("현재 변경 내용을 덮어쓰고 결과 파일을 불러올까요?")) {
     return;
   }
 
   if ("showOpenFilePicker" in window) {
     try {
-      const [handle] = await window.showOpenFilePicker({
+      const pickerOptions = {
         multiple: false,
         types: [
           {
-            description: "JavaScript",
+            description: "Result JSON",
             accept: {
-              "text/javascript": [".js"],
+              "application/json": [".json"],
             },
           },
         ],
-      });
+      };
+      const lastResultHandle = await getLastResultFileHandle();
+
+      applyPickerStartIn(pickerOptions, lastResultHandle);
+
+      const [handle] = await window.showOpenFilePicker(pickerOptions);
 
       if (!handle) {
         return;
       }
 
       const file = await handle.getFile();
-      await importFromFile(file);
+      await importFromFile(file, { handle });
       return;
     } catch (error) {
       if (error && error.name === "AbortError") {
-        setStatus("JS 불러오기를 취소했습니다.");
+        setStatus("결과 파일 불러오기를 취소했습니다.");
         return;
       }
 
       console.error(error);
-      setStatus("JS 파일을 불러오지 못했습니다.", true);
+      if (error && (error.name === "DataCloneError" || error.name === "NotFoundError")) {
+        await forgetLastSaveHandle();
+      }
+      setStatus("결과 파일을 불러오지 못했습니다.", true);
       return;
     }
   }
@@ -520,69 +595,44 @@ async function openLoadPicker() {
   loadFileInput.click();
 }
 
-function downloadExportFile() {
-  const blob = new Blob([buildExportText()], { type: "text/javascript;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-
-  anchor.href = url;
-  anchor.download = "advanced-dictation-results.js";
-  document.body.append(anchor);
-  anchor.click();
-  anchor.remove();
-
-  window.setTimeout(() => {
-    URL.revokeObjectURL(url);
-  }, 1000);
-
-  setStatus("JS 파일을 다운로드했습니다. 현재 폴더 파일은 아직 바뀌지 않았습니다.");
-}
-
-async function copyExportText() {
-  try {
-    await navigator.clipboard.writeText(buildExportText());
-    updatePreview();
-    setStatus("JS 내용을 복사했습니다. 원본 파일은 아직 바뀌지 않았습니다.");
-  } catch (error) {
-    console.error(error);
-    setStatus("복사하지 못했습니다.", true);
-  }
-}
-
 async function saveWithPicker() {
   if (!("showSaveFilePicker" in window)) {
-    downloadExportFile();
+    setStatus("이 브라우저에서는 파일 직접 저장을 지원하지 않습니다. Chrome 또는 Edge에서 열어 주세요.", true);
     return;
   }
 
   try {
     const pickerOptions = {
       id: SAVE_PICKER_ID,
-      suggestedName: "advanced-dictation-results.js",
+      suggestedName: "advanced-dictation-results.json",
       types: [
         {
-          description: "JavaScript",
+          description: "JSON",
           accept: {
-            "text/javascript": [".js"],
+            "application/json": [".json"],
           },
         },
       ],
     };
-    const lastSaveHandle = await getLastSaveHandle();
+    const lastSaveHandle = await getLastResultFileHandle();
 
-    if (lastSaveHandle) {
-      pickerOptions.startIn = lastSaveHandle;
+    applyPickerStartIn(pickerOptions, lastSaveHandle);
+
+    if (lastSaveHandle?.name) {
+      pickerOptions.suggestedName = lastSaveHandle.name;
     }
 
     const handle = await window.showSaveFilePicker(pickerOptions);
 
+    const savedData = buildExportData();
     const writable = await handle.createWritable();
-    await writable.write(buildExportText());
+    await writable.write(`${JSON.stringify(savedData, null, 2)}\n`);
     await writable.close();
     await rememberLastSaveHandle(handle);
+    advancedDictationData = savedData;
     updatePreview();
     markSaved();
-    setStatus("선택한 파일에 저장했습니다.");
+    setStatus("선택한 결과 JSON 파일에 저장했습니다.");
   } catch (error) {
     if (error && error.name === "AbortError") {
       setStatus("파일 저장을 취소했습니다.");
@@ -612,22 +662,52 @@ loadFileInput.addEventListener("change", async () => {
     await importFromFile(file);
   } catch (error) {
     console.error(error);
-    setStatus("JS 파일을 불러오지 못했습니다.", true);
+    setStatus("결과 파일을 불러오지 못했습니다.", true);
   } finally {
     loadFileInput.value = "";
   }
 });
 
 saveFileButton.addEventListener("click", saveWithPicker);
-downloadFileButton.addEventListener("click", downloadExportFile);
-copyFileButton.addEventListener("click", copyExportText);
 refreshPreviewButton.addEventListener("click", () => {
   updatePreview();
   setStatus("미리보기를 새로고쳤습니다.");
 });
 
-hydrateStudentsFromCurrentData();
-renderTable();
-updatePreview();
-markSaved();
-setStatus("현재 데이터를 불러왔습니다.");
+async function initializeEditor() {
+  hydrateStudentsFromCurrentData();
+  renderTable();
+  updatePreview();
+  markSaved();
+
+  try {
+    const storedResult = await readDataFromStoredHandle();
+
+    if (storedResult.status === "loaded") {
+      applyLoadedData(storedResult.data);
+      setStatus(`${storedResult.fileName} 파일을 불러왔습니다.`);
+      return;
+    }
+
+    if (storedResult.status === "permission-needed") {
+      setStatus(
+        `${storedResult.fileName} 위치는 기억했지만 브라우저 권한이 필요합니다. 결과 JSON 불러오기를 눌러 같은 파일을 허용해 주세요.`,
+        true,
+      );
+      return;
+    }
+  } catch (error) {
+    console.warn("이전에 선택한 결과 JSON 파일을 읽지 못했습니다.", error);
+  }
+
+  try {
+    const sourceData = await loadDefaultResultJson();
+    applyLoadedData(sourceData);
+    setStatus(`${RESULT_JSON_PATH} 파일을 불러왔습니다.`);
+  } catch (error) {
+    console.error(error);
+    setStatus(`${RESULT_JSON_PATH} 파일을 자동으로 읽지 못했습니다. 결과 JSON 불러오기로 같은 파일을 선택해 주세요.`, true);
+  }
+}
+
+initializeEditor();
