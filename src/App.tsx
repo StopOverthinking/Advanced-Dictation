@@ -314,7 +314,7 @@ function HomeMenu({ onNavigate }: { onNavigate: (route: RouteName) => void }) {
           }}
         />
         <MenuButton
-          title="9주차"
+          title="10주차"
           description="받아쓰기 정답"
           href="#/answers"
           onNavigate={() => {
@@ -1047,18 +1047,18 @@ function ScoresPage({ onNavigate }: { onNavigate: (route: RouteName) => void }) 
 }
 
 function AnswersPage({ onNavigate }: { onNavigate: (route: RouteName) => void }) {
-  const answers = getDictationProblemsForSet("set9");
+  const answers = getDictationProblemsForSet("set10");
 
   return (
     <div className="shell">
       <section className="hero hero-subpage">
         <div className="hero-top">
           <div className="hero-copy">
-            <h1>9주차</h1>
+            <h1>10주차</h1>
             <RouteBackButton onNavigate={onNavigate} />
-            <p className="subcopy">9주차 받아쓰기</p>
+            <p className="subcopy">10주차 받아쓰기</p>
           </div>
-          <div className="meta" aria-label="9주차 정답 요약">
+          <div className="meta" aria-label="10주차 정답 요약">
             <span>문항 {answers.length}</span>
           </div>
         </div>
