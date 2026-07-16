@@ -4,7 +4,10 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
+    "generate:editor-data": "node scripts/generate-editor-data.mjs",
+    "predev": "npm run generate:editor-data",
     "dev": "vite",
+    "prebuild": "npm run generate:editor-data",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "check": "tsc --noEmit"

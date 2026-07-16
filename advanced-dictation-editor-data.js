@@ -1,4 +1,5 @@
-{
+// Generated from src/generated/advanced-dictation-results.json. Do not edit directly.
+window.ADVANCED_DICTATION_EDITOR_DATA = {
   "scoreScale": 10,
   "defaultStatus": "미실시",
   "defaultStatusByRound": {
@@ -334,4 +335,4 @@
       }
     }
   }
-}
+};
